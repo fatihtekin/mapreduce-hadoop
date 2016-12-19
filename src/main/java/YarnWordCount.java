@@ -2,6 +2,7 @@ import java.io.IOException;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -14,7 +15,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
-public class WordCount {
+public class YarnWordCount {
  
     public static class Map extends 
             Mapper<LongWritable, Text, Text, IntWritable> {
@@ -46,13 +47,15 @@ public class WordCount {
     }
 
     public static void main(String[] args) throws Exception {
+        Configuration conf = new Configuration();
 
-    	System.setProperty("hadoop.home.dir", "C:\\Users\\ftekin\\hdp");
-    	
-    	Configuration conf = new Configuration();
-
-        Job job = Job.getInstance(conf, "wordcount");
-        job.setJarByClass(WordCount.class);
+        conf.set("yarn.resourcemanager.address", "127.0.0.1:8032"); 
+        conf.set("mapreduce.framework.name", "yarn");
+        conf.set("fs.default.name", "hdfs://127.0.0.1:9000");
+        conf.set("mapreduce.job.jar","C:\\Users\\hadoop\\projects\\wc-mvn\\target\\wc-mvn-0.0.1-SNAPSHOT.jar");
+        
+        Job job = Job.getInstance(conf, "WordCount");
+        job.setJarByClass(YarnWordCount.class);
 
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
@@ -63,8 +66,13 @@ public class WordCount {
         job.setInputFormatClass(TextInputFormat.class);
         job.setOutputFormatClass(TextOutputFormat.class);
 
-        FileInputFormat.addInputPath(job, new Path("hdfs://AML1483:9000/log.txt"));
-        FileOutputFormat.setOutputPath(job, new Path("hdfs://AML1483:9000/out.txt"));
+        FileInputFormat.addInputPath(job, new Path("hdfs://127.0.0.1:9000/log.txt"));
+        
+        FileSystem fs = FileSystem.get(conf);
+        Path out = new Path("hdfs://127.0.0.1:9000/out");
+        fs.delete(out, true);
+        
+        FileOutputFormat.setOutputPath(job, new Path("hdfs://127.0.0.1:9000/out"));
 
         job.waitForCompletion(true);
     }
